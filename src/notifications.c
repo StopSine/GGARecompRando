@@ -8,6 +8,7 @@
 
 #define NOTIFICATION_WIDTH 400.0f
 #define NOTIFICATION_PADDING 12.0f
+#define LABEL_WORD_GAP 6.0f
 
 static RecompuiContext notif_context;
 static RecompuiResource notif_root;
@@ -144,8 +145,10 @@ void randoEmitReceiveNotification(const char* item_name, const char* from_name, 
     RecompuiResource text_item = recompui_create_label(notif_context, notification, item_name, LABELSTYLE_SMALL);
     recompui_set_color(text_item, classification_color(item_class));
 
+    // Each label is its own flex item, so a leading space in the text collapses.
     RecompuiResource text_from = recompui_create_label(notif_context, notification, " from ", LABELSTYLE_SMALL);
     recompui_set_color(text_from, &msgTextColor);
+    recompui_set_margin_left(text_from, LABEL_WORD_GAP, UNIT_DP);
 
     RecompuiResource text_player = recompui_create_label(notif_context, notification, from_name, LABELSTYLE_SMALL);
     recompui_set_color(text_player, &playerTextColor);
@@ -166,6 +169,7 @@ void randoEmitSendNotification(const char* item_name, const char* to_name, Rando
 
     RecompuiResource text_to = recompui_create_label(notif_context, notification, " to ", LABELSTYLE_SMALL);
     recompui_set_color(text_to, &msgTextColor);
+    recompui_set_margin_left(text_to, LABEL_WORD_GAP, UNIT_DP);
 
     RecompuiResource text_player = recompui_create_label(notif_context, notification, to_name, LABELSTYLE_SMALL);
     recompui_set_color(text_player, &playerTextColor);

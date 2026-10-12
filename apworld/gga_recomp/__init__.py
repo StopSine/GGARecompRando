@@ -37,6 +37,11 @@ class GGAWorld(World):
     location_name_to_id = location_table
     item_name_to_id = item_table
 
+    # The glue reads death_link out of slot data, so it has to be published
+    # here, not only set in the yaml.
+    def fill_slot_data(self) -> dict:
+        return {"death_link": int(self.options.death_link.value)}
+
     def create_item(self, name: str) -> GGAItem:
         data = item_data_table[name]
         return GGAItem(name, data.type, data.code, self.player)

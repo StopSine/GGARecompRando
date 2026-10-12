@@ -2,10 +2,30 @@
 #include "apconnect_menu.h"
 #include "recompui.h"
 #include "recomputils.h"
+#include "recompconfig.h"
 
 static ApconnectMenu connect_menu;
 
 bool apConnectPending = false;
+
+static void setInputFieldSize(RecompuiResource field) {
+    recompui_set_line_height(field, 38.0f, UNIT_DP);
+    recompui_set_min_height(field, 56.0f, UNIT_DP);
+    recompui_set_padding_top(field, 10.0f, UNIT_DP);
+    recompui_set_padding_bottom(field, 10.0f, UNIT_DP);
+    recompui_set_padding_left(field, 12.0f, UNIT_DP);
+    recompui_set_padding_right(field, 12.0f, UNIT_DP);
+}
+
+// The mod cannot write its own config, so these only seed the fields; the
+// player edits the stored values in the Mods tab.
+static void prefillFromConfig(RecompuiResource field, const char* key) {
+    char* value = recomp_get_config_string(key);
+    if (value != NULL) {
+        recompui_set_input_text(field, value);
+        recomp_free_config_string(value);
+    }
+}
 
 static void connectPressed(RecompuiResource resource, const RecompuiEventData* data, void* userdata) {
     if (data->type != UI_EVENT_CLICK) {
@@ -40,7 +60,7 @@ static void testSendPressed(RecompuiResource resource, const RecompuiEventData* 
 
 static void closePressed(RecompuiResource resource, const RecompuiEventData* data, void* userdata) {
     if (data->type == UI_EVENT_CLICK) {
-        recompui_hide_context(connect_menu.context);
+        randoHideAPConnectMenu();
     }
 }
 
@@ -61,7 +81,7 @@ void randoCreateAPConnectMenu(void) {
 
     connect_menu.server_textinput = recompui_create_textinput(connect_menu.context, connect_menu.frame.container);
     recompui_set_font_size(connect_menu.server_textinput, 30.0f, UNIT_DP);
-    recompui_set_input_text(connect_menu.server_textinput, "archipelago.gg:38281");
+    setInputFieldSize(connect_menu.server_textinput);
     recompui_set_margin_top(connect_menu.server_textinput, 10.0f, UNIT_DP);
     recompui_set_margin_bottom(connect_menu.server_textinput, 20.0f, UNIT_DP);
     recompui_set_max_width(connect_menu.server_textinput, 100.0f, UNIT_PERCENT);
@@ -72,6 +92,7 @@ void randoCreateAPConnectMenu(void) {
 
     connect_menu.slot_textinput = recompui_create_textinput(connect_menu.context, connect_menu.frame.container);
     recompui_set_font_size(connect_menu.slot_textinput, 30.0f, UNIT_DP);
+    setInputFieldSize(connect_menu.slot_textinput);
     recompui_set_margin_top(connect_menu.slot_textinput, 10.0f, UNIT_DP);
     recompui_set_margin_bottom(connect_menu.slot_textinput, 20.0f, UNIT_DP);
     recompui_set_max_width(connect_menu.slot_textinput, 100.0f, UNIT_PERCENT);
@@ -82,6 +103,7 @@ void randoCreateAPConnectMenu(void) {
 
     connect_menu.password_textinput = recompui_create_passwordinput(connect_menu.context, connect_menu.frame.container);
     recompui_set_font_size(connect_menu.password_textinput, 30.0f, UNIT_DP);
+    setInputFieldSize(connect_menu.password_textinput);
     recompui_set_margin_top(connect_menu.password_textinput, 10.0f, UNIT_DP);
     recompui_set_max_width(connect_menu.password_textinput, 100.0f, UNIT_PERCENT);
 
@@ -97,6 +119,9 @@ void randoCreateAPConnectMenu(void) {
     recompui_set_margin_top(connect_menu.test_send_button, 20.0f, UNIT_DP);
     recompui_register_callback(connect_menu.test_send_button, testSendPressed, NULL);
 
+    prefillFromConfig(connect_menu.server_textinput, "server_address");
+    prefillFromConfig(connect_menu.slot_textinput, "slot_name");
+
     connect_menu.close_button = recompui_create_button(connect_menu.context, connect_menu.frame.root,
                                                        "Close", BUTTONSTYLE_SECONDARY);
     recompui_set_position(connect_menu.close_button, POSITION_ABSOLUTE);
@@ -107,6 +132,21 @@ void randoCreateAPConnectMenu(void) {
     recompui_close_context(connect_menu.context);
 }
 
+static bool menu_visible = false;
+
 void randoShowAPConnectMenu(void) {
+    if (menu_visible) {
+        return;
+    }
     recompui_show_context(connect_menu.context);
+    menu_visible = true;
 }
+
+void randoHideAPConnectMenu(void) {
+    if (!menu_visible) {
+        return;
+    }
+    recompui_hide_context(connect_menu.context);
+    menu_visible = false;
+}
+

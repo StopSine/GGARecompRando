@@ -22,28 +22,27 @@ typedef unsigned char bool;
 
 #define AP_GAME_NAME "Goemon's Great Adventure Recompiled"
 
-// A location id is the position of its flag bit in the save, so a check can be
-// reported straight from the bit that changed and neither side needs a table:
-//
-//   location_id = (flag_byte - AP_FLAG_BLOCK) * 8 + bit
-//
+// A location id is the position of its flag bit in the save, so neither side
+// needs a table: location_id = (flag_byte - AP_FLAG_BLOCK) * 8 + bit.
 // See lib/gga/docs/save_memory_map.md in the Goemon64Recomp repo.
 #define AP_FLAG_BLOCK 0x8008821C
 #define AP_FLAG_BLOCK_SIZE 0x14
 
-// Sasuke's unlock is the only check outside the block. Yae needs no such
-// handling: joining also sets a bit inside it.
+// The only check outside the block. Yae needs no equivalent: joining also sets
+// a bit inside it.
 #define AP_SASUKE_BYTE 0x80088317
 #define AP_SASUKE_BIT 7
 
-// Progress inside a castle: 0 on entry, 1 once the first boss is down, 2 when
-// the castle is finished. One byte per castle. Dream Castle has no cleared flag
-// of its own, so its counter is what says the game is won.
+// 0 on entry, 1 once the first boss is down, 2 when the castle is finished.
+// Dream Castle has no cleared flag, so its counter is what says the game is won.
 #define AP_DREAM_CASTLE_PROGRESS 0x80088315
 #define AP_CASTLE_PROGRESS_DONE 2
 
-// Entry pass counts, one byte per world. The count is the reward; the flag bit
-// is only the record of where it came from.
+// Player 1 health, 0 to 3.
+#define AP_P1_HEALTH 0x80088284
+
+// One byte per world. The count is the reward; the flag bit only records where
+// it came from.
 #define AP_PASS_COUNT_BASE 0x80088276
 #define AP_PASS_COUNT_WORLDS 6
 
@@ -77,10 +76,13 @@ RECOMP_IMPORT(".", u32 rando_has_item(u32 item_id));
 RECOMP_IMPORT(".", void rando_get_own_slot_name(char* out_str));
 RECOMP_IMPORT(".", u32 rando_get_seed_name(char* seed_name_out, u32 buffer_size));
 RECOMP_IMPORT(".", void rando_complete_goal());
+RECOMP_IMPORT(".", bool rando_get_death_link_enabled());
+RECOMP_IMPORT(".", bool rando_get_death_link_pending());
+RECOMP_IMPORT(".", void rando_reset_death_link_pending());
+RECOMP_IMPORT(".", void rando_send_death_link());
 
-// UI events are queued by the host and only dispatched when guest code drains
-// them. Zelda64Recomp does this from a patch on Graph_UpdateGame; nothing in
-// Goemon64Recomp does, so the mod has to.
+// The host queues UI events and only dispatches them when guest code drains
+// them. Nothing in Goemon64Recomp does, so the mod has to.
 RECOMP_IMPORT("*", void recomp_run_ui_callbacks());
 
 typedef enum {
@@ -101,8 +103,11 @@ void randoEmitErrorNotification(const char* error_text);
 
 void randoCreateAPConnectMenu(void);
 void randoShowAPConnectMenu(void);
+void randoHideAPConnectMenu(void);
 
 void randoItemGive(u32 ap_item_id);
+void randoApplyWorldAccess(void);
 void randoPollChecks(void);
+void randoPollDeathLink(void);
 
 #endif

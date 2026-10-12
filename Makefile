@@ -12,8 +12,11 @@ MOD_TOOL := ../N64RecompSource/cmake-build-modtool/Release/RecompModTool.exe
 TARGET   := $(BUILD_DIR)/mod.elf
 LDSCRIPT := mod.ld
 
-CC ?= clang
-LD ?= ld.lld
+CC := clang
+LD := ld.lld
+
+# The toolchain ships in bin/ rather than being expected on PATH.
+export PATH := $(CURDIR)/bin:$(PATH)
 
 CFLAGS   := -target mips -mips2 -mabi=32 -O2 -G0 -mno-abicalls -mno-odd-spreg \
             -mno-check-zero-division -fomit-frame-pointer -ffast-math \

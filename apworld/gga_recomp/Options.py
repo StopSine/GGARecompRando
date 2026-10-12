@@ -1,8 +1,8 @@
 from dataclasses import dataclass
 
-from Options import PerGameCommonOptions
+from Options import DeathLink, PerGameCommonOptions
 
 
 @dataclass
 class GGAOptions(PerGameCommonOptions):
-    pass
+    death_link: DeathLink

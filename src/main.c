@@ -1,6 +1,7 @@
 #include "gga_ap.h"
 #include "recompui.h"
 #include "recomputils.h"
+#include "recompconfig.h"
 
 bool apConnected = false;
 extern bool apConnectPending;
@@ -15,13 +16,16 @@ static u8 passSnapshot[AP_PASS_COUNT_WORLDS];
 static bool snapshotTaken = false;
 static bool goalSent = false;
 
-// randoItemGive raises the pass counts, and the rollback below would undo that,
-// so the snapshot has to follow anything Archipelago grants.
+// Must follow randoItemGive, or the rollback in randoPollChecks undoes it.
 static void syncPassSnapshot(void) {
     for (u32 i = 0; i < AP_PASS_COUNT_WORLDS; i++) {
         passSnapshot[i] = *(volatile u8*)(AP_PASS_COUNT_BASE + i);
     }
 }
+
+// Likewise for the flags randoItemGive sets: without this the next poll reads
+// the grant as a freshly set check and clearRewardFlag wipes it the same frame.
+static void syncRewardFlagSnapshot(void);
 
 static void randoInitUi(void) {
     randoCreateNotificationContainer();
@@ -41,10 +45,10 @@ static void pollConnection(void) {
 
         char slot_name[64];
         rando_get_own_slot_name(slot_name);
+        randoHideAPConnectMenu();
         randoEmitNormalNotification("Connected");
 
-        // Without this the server never sends what each location holds, so a
-        // send notification can only name the location.
+        // Without this the server never says what each location holds.
         rando_queue_scouts_all();
         rando_send_queued_scouts(0);
 
@@ -57,8 +61,7 @@ static void pollConnection(void) {
     }
 }
 
-// AP_ItemType is FILLER, PROGRESSION, USEFUL, TRAP; the notification enum is
-// PROGRESSION, USEFUL, JUNK, TRAP, so the two cannot be cast across.
+// AP_ItemType is FILLER, PROGRESSION, USEFUL, TRAP; the two enums do not align.
 static RandoItemClassification classificationFromApType(u32 ap_type) {
     switch (ap_type) {
         case 1:  return RANDO_ITEM_CLASS_PROGRESSION;
@@ -68,8 +71,6 @@ static RandoItemClassification classificationFromApType(u32 ap_type) {
     }
 }
 
-// The item behind a location is only known once the scouts come back, so fall
-// back to naming the location when they have not.
 static void randoAnnounceSend(u32 location_id) {
     char item_name[128];
     char player_name[64];
@@ -111,6 +112,7 @@ static void pollItems(void) {
     }
 
     syncPassSnapshot();
+    syncRewardFlagSnapshot();
     lastItemsSize = items_size;
 }
 
@@ -126,19 +128,90 @@ void randoTick(void) {
 
     if (apConnected) {
         pollItems();
+        randoApplyWorldAccess();
         randoPollChecks();
+        randoPollDeathLink();
     }
 }
 
-// Flags that are the reward rather than a record of one. The game grants these
-// itself, so once the check is reported the bit has to be cleared again or the
-// player keeps the vanilla unlock as well as whatever Archipelago sends.
+static u8 healthSnapshot = 0;
+static bool healthSnapshotTaken = false;
+// An incoming death zeroes health, which would otherwise bounce straight back out.
+static bool deathFromLink = false;
+
+// The slot decides whether death link exists; this only lets the player opt out.
+static bool deathLinkOn(void) {
+    return rando_get_death_link_enabled() && recomp_get_config_u32("death_link") == 1;
+}
+
+RECOMP_HOOK_RETURN("func_80189D78_5EC7D8")
+void randoHealthWritten(void) {
+    if (!apConnected) {
+        return;
+    }
+
+    u8 health = *(volatile u8*)AP_P1_HEALTH;
+
+    if (!deathLinkOn()) {
+        healthSnapshot = health;
+        healthSnapshotTaken = true;
+        return;
+    }
+
+    if (health == 0 && healthSnapshot > 0) {
+        if (deathFromLink) {
+            deathFromLink = false;
+        }
+        else {
+            rando_send_death_link();
+        }
+    }
+
+    healthSnapshot = health;
+    healthSnapshotTaken = true;
+}
+
+void randoPollDeathLink(void) {
+    // Dropped rather than queued, so switching the toggle back on cannot fire a
+    // death that arrived while it was off.
+    if (!deathLinkOn()) {
+        if (rando_get_death_link_pending()) {
+            rando_reset_death_link_pending();
+        }
+        return;
+    }
+
+    if (!healthSnapshotTaken) {
+        healthSnapshot = *(volatile u8*)AP_P1_HEALTH;
+        healthSnapshotTaken = true;
+    }
+
+    if (rando_get_death_link_pending()) {
+        rando_reset_death_link_pending();
+        if (*(volatile u8*)AP_P1_HEALTH > 0) {
+            *(volatile u8*)AP_P1_HEALTH = 0;
+            deathFromLink = true;
+            healthSnapshot = 0;
+            randoEmitNormalNotification("Death link received");
+        }
+    }
+}
+
+// Flags that are the reward rather than a record of one. Cleared after reporting,
+// or the player keeps the vanilla unlock as well as what Archipelago sends.
 static const u32 rewardFlagBytes[] = {
-    0x80088222,  // bit 2 chain pipe
-    0x80088223,  // bit 3 yae and the swim unlock
+    0x8008822A,  // bit 2 chain pipe
+    0x8008822B,  // bit 3 yae and the swim unlock
 };
 static const u32 rewardFlagBits[] = { 2, 3 };
 #define REWARD_FLAG_COUNT 2
+
+static void syncRewardFlagSnapshot(void) {
+    for (u32 i = 0; i < REWARD_FLAG_COUNT; i++) {
+        u32 index = rewardFlagBytes[i] - AP_FLAG_BLOCK;
+        flagSnapshot[index] = *(volatile u8*)rewardFlagBytes[i];
+    }
+}
 
 static void clearRewardFlag(u32 location_id) {
     for (u32 i = 0; i < REWARD_FLAG_COUNT; i++) {
@@ -166,8 +239,6 @@ static void sendCheck(u32 location_id) {
     randoAnnounceSend(location_id);
 }
 
-// The game writes these flags itself, so a check is whatever bit it just set
-// rather than anything the mod has to be told about.
 void randoPollChecks(void) {
     u8 current[AP_FLAG_BLOCK_SIZE];
 
@@ -210,9 +281,8 @@ void randoPollChecks(void) {
         randoEmitNormalNotification("Goal complete");
     }
 
-    // The game awards the pass itself. Archipelago decides who actually gets
-    // one, so any increase the game makes is rolled back; randoItemGive is the
-    // only thing allowed to raise these.
+    // The game awards passes itself, so its increases are rolled back and only
+    // randoItemGive may raise these.
     for (u32 i = 0; i < AP_PASS_COUNT_WORLDS; i++) {
         volatile u8* p = (volatile u8*)(AP_PASS_COUNT_BASE + i);
         if (*p > passSnapshot[i]) {

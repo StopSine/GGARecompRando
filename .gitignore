@@ -12,6 +12,7 @@ lib/*.dll
 
 # Zipped by apworld/build_apworld.py from apworld/gga_recomp/
 apworld/*.apworld
+apworld/*.apworld.tmp
 
 # Python
 __pycache__/

@@ -36,8 +36,36 @@ native_libraries = [
         "rando_get_own_slot_name",
         "rando_get_seed_name",
         "rando_complete_goal",
+        "rando_get_death_link_enabled",
+        "rando_get_death_link_pending",
+        "rando_reset_death_link_pending",
+        "rando_send_death_link",
     ] }
 ]
+
+# The mod cannot write its own config, so these are what makes a connection
+# persist between runs: set them once here and the connect menu starts filled in.
+[[manifest.config_options]]
+id = "server_address"
+name = "Server Address"
+description = "Prefills the connect menu. Host and port, for example archipelago.gg:38281"
+type = "String"
+default = "archipelago.gg:38281"
+
+[[manifest.config_options]]
+id = "slot_name"
+name = "Slot Name"
+description = "Prefills the connect menu with your slot name."
+type = "String"
+default = ""
+
+[[manifest.config_options]]
+id = "death_link"
+name = "Death Link"
+description = "Send and receive deaths. Only has an effect when the slot was generated with death link on."
+type = "Enum"
+options = [ "Disabled", "Enabled" ]
+default = "Enabled"
 
 [inputs]
 elf_path = "build/mod.elf"
