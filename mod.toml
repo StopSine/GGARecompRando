@@ -1,0 +1,47 @@
+# Archipelago support for Goemon's Great Adventure: Recompiled.
+
+[manifest]
+id = "gga_recomp_rando"
+version = "0.0.1"
+display_name = "GGARecompRando"
+description = """
+Archipelago multiworld support for Goemon's Great Adventure.
+
+https://github.com/StopSine/GGARecompRando"""
+short_description = "Archipelago multiworld"
+authors = [ "StopSine" ]
+
+game_id = "gga"
+minimum_recomp_version = "0.2.0"
+
+native_libraries = [
+    { name = "APCpp-Glue", funcs = [
+        "rando_init",
+        "rando_is_connected",
+        "rando_connect_failed",
+        "rando_get_items_size",
+        "rando_get_item",
+        "rando_get_sending_player",
+        "rando_get_item_name_from_id",
+        "rando_get_sending_player_name",
+        "rando_send_location",
+        "rando_get_location_item_name",
+        "rando_get_location_item_player",
+        "rando_get_location_type",
+        "rando_queue_scouts_all",
+        "rando_send_queued_scouts",
+        "rando_is_scouted",
+        "rando_location_is_checked",
+        "rando_has_item",
+        "rando_get_own_slot_name",
+        "rando_get_seed_name",
+        "rando_complete_goal",
+    ] }
+]
+
+[inputs]
+elf_path = "build/mod.elf"
+mod_filename = "gga_recomp_rando"
+
+func_reference_syms_file = "../Goemon64Recomp/lib/gga/config/usa/gga.elf.syms.toml"
+data_reference_syms_files = [ "../Goemon64Recomp/lib/gga/config/usa/gga.elf.datasyms.toml" ]

@@ -1,0 +1,25 @@
+# Build intermediates
+build/
+
+# Packaged mod, produced by `make`
+gga_recomp_rando/
+
+# Vendored toolchain, ~85 MB of clang and lld
+bin/
+
+# Built by RecompRandoGlue, copied in for the mod tool to package
+lib/*.dll
+
+# Zipped by apworld/build_apworld.py from apworld/gga_recomp/
+apworld/*.apworld
+
+# Python
+__pycache__/
+*.py[cod]
+
+# Editors and OS
+.vscode/
+.idea/
+*.swp
+Thumbs.db
+.DS_Store
