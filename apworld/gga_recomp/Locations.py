@@ -17,11 +17,14 @@ class GGALocationData(NamedTuple):
 #
 #   code = (guest_flag_byte - 0x8008821C) * 8 + bit_index
 #
-# Save editor byte 0x11c is pak 0x61C, guest 0x8008821C, so the byte number is
-# (template_byte - 0x11c). Names follow the save editor template's labels; see
+# The block starts at save editor byte 0x114, not 0x11c where the entry pass
+# bits happen to begin. Names follow the save editor template's labels; see
 # lib/gga/docs/save_memory_map.md in the Goemon64Recomp repo.
+_FLAG_BLOCK_START = 0x114
+
+
 def _code(byte: int, bit: int) -> int:
-    return (byte - 0x11c) * 8 + bit
+    return (byte - _FLAG_BLOCK_START) * 8 + bit
 
 
 location_data_table: Dict[str, GGALocationData] = {

@@ -28,15 +28,13 @@ static void connectPressed(RecompuiResource resource, const RecompuiEventData* d
     recomp_free(password_text);
 }
 
-// ponytail: stands in for the in-game entry pass pickup until that function is
-// located. Remove once randoEntryPassCollected has a real caller.
 static void testSendPressed(RecompuiResource resource, const RecompuiEventData* data, void* userdata) {
     if (data->type != UI_EVENT_CLICK) {
         return;
     }
 
     recompui_close_context(connect_menu.context);
-    randoEntryPassCollected();
+    randoPollChecks();
     recompui_open_context(connect_menu.context);
 }
 
